@@ -50,9 +50,9 @@
   .photo .ph{font-size:6rem}
   .photo.talking{animation:talk .35s ease-in-out infinite alternate}
   @keyframes talk{from{transform:scale(1) rotate(-1deg)}to{transform:scale(1.035) rotate(1deg)}}
-  .mouth{position:absolute;left:50%;bottom:22%;width:46px;height:14px;margin-left:-23px;background:#7a1f33;border-radius:0 0 46px 46px;opacity:0;transform-origin:top;border:2px solid #fff8}
+  .mouth{position:absolute;left:var(--mx,50%);top:var(--my,70%);width:var(--mw,46px);height:calc(var(--mw,46px)*.32);transform:translate(-50%,0);background:#7a1f33;border-radius:0 0 46px 46px;opacity:0;transform-origin:top;border:2px solid #fff6}
   .talking .mouth{opacity:.9;animation:mouth .22s ease-in-out infinite alternate}
-  @keyframes mouth{from{transform:scaleY(.3)}to{transform:scaleY(1.6)}}
+  @keyframes mouth{from{transform:translate(-50%,0) scaleY(.3)}to{transform:translate(-50%,0) scaleY(1.6)}}
   .bubble{margin-top:14px;font-size:1.15rem;line-height:1.5;text-align:center;min-height:5em}
   .bubble span{opacity:.25;transition:opacity .2s}
   .bubble span.on{opacity:1}
@@ -88,7 +88,7 @@
    Per dag: date, text, photo (pad naar foto, of leeg voor emoji), emoji (alleen test) */
 const YEAR = 2026, MONTH = 10;
 const DAYS = [
-  {d: 9, emoji:"🐶", text:"Goede reis lieverd! Ik mis je nu al. De hond ook, die ligt al bij de deur."},
+  {d: 9, emoji:"🐶", photo:"photos/dag09.jpg", mouth:{x:47,y:37,w:30}, text:"Goede reis lief baasje, en bedankt dat je mij goed achterlaat bij Odie."},
   {d:10, emoji:"👧", text:"Goedemorgen! Vandaag ben je in Medan. Wij denken aan je."},
   {d:11, emoji:"👦", text:"Voorbeeldtekst voor dag drie."},
   {d:12, emoji:"🐕", text:"Voorbeeldtekst voor dag vier."},
@@ -156,6 +156,8 @@ let current = null;
 function openDay(o,btn){
   current = o;
   if(o.photo){ img.src=o.photo; img.hidden=false; ph.hidden=true; } else { img.hidden=true; ph.hidden=false; ph.textContent=o.emoji||"💌"; }
+  const m = o.mouth || {x:50,y:72,w:46};
+  photo.style.setProperty("--mx",m.x+"%"); photo.style.setProperty("--my",m.y+"%"); photo.style.setProperty("--mw",m.w+"px");
   // woorden apart zodat ze oplichten tijdens het praten
   bubble.innerHTML = o.text.split(" ").map(w=>`<span>${w}</span>`).join(" ");
   modal.classList.add("show");

@@ -49,10 +49,9 @@
   .photo img{width:100%;height:100%;object-fit:cover;display:block}
   .photo .ph{font-size:6rem}
   .photo.talking{animation:talk .35s ease-in-out infinite alternate}
-  @keyframes talk{from{transform:scale(1) rotate(-1deg)}to{transform:scale(1.035) rotate(1deg)}}
-  .mouth{position:absolute;left:var(--mx,50%);top:var(--my,70%);width:var(--mw,46px);height:calc(var(--mw,46px)*.32);transform:translate(-50%,0);background:#7a1f33;border-radius:0 0 46px 46px;opacity:0;transform-origin:top;border:2px solid #fff6}
-  .talking .mouth{opacity:.9;animation:mouth .22s ease-in-out infinite alternate}
-  @keyframes mouth{from{transform:translate(-50%,0) scaleY(.3)}to{transform:translate(-50%,0) scaleY(1.6)}}
+  @keyframes talk{from{transform:scale(1) rotate(-.6deg)}to{transform:scale(1.015) rotate(.6deg)}}
+  .photo svg{width:100%;height:100%;display:block}
+  #svgwrap{position:absolute;inset:0}
   .bubble{margin-top:14px;font-size:1.15rem;line-height:1.5;text-align:center;min-height:5em}
   .bubble span{opacity:.25;transition:opacity .2s}
   .bubble span.on{opacity:1}
@@ -76,7 +75,7 @@
 
 <div id="modal" role="dialog" aria-modal="true">
   <div class="sheet">
-    <div class="photo" id="photo"><span class="ph" id="ph">🐶</span><img id="img" alt="" hidden><div class="mouth"></div></div>
+    <div class="photo" id="photo"><span class="ph" id="ph">🐶</span><img id="img" alt="" hidden><div id="svgwrap"></div></div>
     <div class="bubble" id="bubble"></div>
     <div class="row"><button id="again">🔊 Nog een keer</button><button id="close">Sluiten</button></div>
   </div>
@@ -88,7 +87,7 @@
    Per dag: date, text, photo (pad naar foto, of leeg voor emoji), emoji (alleen test) */
 const YEAR = 2026, MONTH = 10;
 const DAYS = [
-  {d: 9, emoji:"🐶", photo:"photos/dag09.jpg", mouth:{x:47,y:37,w:30}, text:"Goede reis lief baasje, en bedankt dat je mij goed achterlaat bij Odie."},
+  {d: 9, emoji:"🐶", photo:"photos/dag09.jpg", jaw:{w:1000,h:1333,hinge:[540,540],top:[[303,477],[497,523]],poly:[[303,477],[497,523],[557,597],[577,677],[430,697],[350,630],[300,543]],dy:8,angle:-5}, text:"Goede reis lief baasje, en bedankt dat je mij goed achterlaat bij Odie."},
   {d:10, emoji:"👧", text:"Goedemorgen! Vandaag ben je in Medan. Wij denken aan je."},
   {d:11, emoji:"👦", text:"Voorbeeldtekst voor dag drie."},
   {d:12, emoji:"🐕", text:"Voorbeeldtekst voor dag vier."},
@@ -151,13 +150,49 @@ document.getElementById("hint").textContent = TEST ? "Testmodus: alle vakjes zij
 // Modal + spraak
 const modal = document.getElementById("modal"), photo = document.getElementById("photo");
 const bubble = document.getElementById("bubble"), img = document.getElementById("img"), ph = document.getElementById("ph");
-let current = null;
+let current = null, jaw = null, cur = 0, target = 0, raf = null, beat = null;
+const svgwrap = document.getElementById("svgwrap");
+const NS = "http://www.w3.org/2000/svg";
+
+// Pepper praat: de onderkaak is een apart plaatje dat om een scharnier draait
+function buildJaw(o){
+  const j=o.jaw, pts=a=>a.map(p=>p.join(",")).join(" ");
+  svgwrap.innerHTML = `<svg viewBox="0 0 ${j.w} ${j.h}" preserveAspectRatio="xMidYMid slice">
+    <defs>
+      <filter id="soft" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="5"/></filter>
+      <filter id="soft2" x="-10%" y="-30%" width="120%" height="160%"><feGaussianBlur stdDeviation="2.5"/></filter>
+      <mask id="jm" maskUnits="userSpaceOnUse" x="0" y="0" width="${j.w}" height="${j.h}"><polygon points="${pts(j.poly)}" fill="#fff" filter="url(#soft)"/></mask>
+    </defs>
+    <image href="${o.photo}" width="${j.w}" height="${j.h}"/>
+    <polygon id="wedge" fill="#1c0a0e" fill-opacity=".92" filter="url(#soft2)" points=""/>
+    <g id="jawg"><g mask="url(#jm)"><image href="${o.photo}" width="${j.w}" height="${j.h}"/></g></g>
+  </svg>`;
+  jaw = {j, g:svgwrap.querySelector("#jawg"), wedge:svgwrap.querySelector("#wedge")};
+  applyJaw(0);
+}
+function moved(p,v){ const {hinge:[hx,hy],dy,angle}=jaw.j, a=angle*v*Math.PI/180, x=p[0]-hx, y=p[1]-hy;
+  return [hx+x*Math.cos(a)-y*Math.sin(a), hy+x*Math.sin(a)+y*Math.cos(a)+dy*v]; }
+function applyJaw(v){
+  if(!jaw) return; const {hinge:[hx,hy],dy,angle,top:[A,B]}=jaw.j;
+  jaw.g.setAttribute("transform",`translate(0 ${dy*v}) rotate(${angle*v} ${hx} ${hy})`);
+  // donkere bek precies in de opening tussen oude en nieuwe kaaklijn
+  const A2=moved(A,v), B2=moved(B,v), up=3;
+  jaw.wedge.setAttribute("points",[[A[0],A[1]-up],[B[0],B[1]-up],B2,A2].map(p=>p.join(",")).join(" "));
+  jaw.wedge.style.display = v<.02 ? "none" : "";
+}
+function tick(){ cur += (target-cur)*.5; applyJaw(cur);
+  if(beat || Math.abs(cur-target)>.01) raf=requestAnimationFrame(tick); else { raf=null; applyJaw(0); } }
+function startTalk(){ clearInterval(beat);
+  beat=setInterval(()=>{ target = Math.random()<.2 ? .05 : .4+Math.random()*.6; },120);
+  if(!raf) raf=requestAnimationFrame(tick); }
+function stopTalk(){ clearInterval(beat); beat=null; target=0; if(!raf) raf=requestAnimationFrame(tick); }
 
 function openDay(o,btn){
   current = o;
-  if(o.photo){ img.src=o.photo; img.hidden=false; ph.hidden=true; } else { img.hidden=true; ph.hidden=false; ph.textContent=o.emoji||"💌"; }
-  const m = o.mouth || {x:50,y:72,w:46};
-  photo.style.setProperty("--mx",m.x+"%"); photo.style.setProperty("--my",m.y+"%"); photo.style.setProperty("--mw",m.w+"px");
+  svgwrap.innerHTML=""; jaw=null;
+  if(o.photo && o.jaw){ buildJaw(o); img.hidden=true; ph.hidden=true; }
+  else if(o.photo){ img.src=o.photo; img.hidden=false; ph.hidden=true; }
+  else { img.hidden=true; ph.hidden=false; ph.textContent=o.emoji||"💌"; }
   // woorden apart zodat ze oplichten tijdens het praten
   bubble.innerHTML = o.text.split(" ").map(w=>`<span>${w}</span>`).join(" ");
   modal.classList.add("show");
@@ -171,7 +206,7 @@ document.getElementById("again").onclick = ()=>current && speak(current.text);
 modal.addEventListener("click",e=>{ if(e.target===modal) closeModal(); });
 
 let timer=null;
-function setTalking(on){ photo.classList.toggle("talking",on); }
+function setTalking(on){ photo.classList.toggle("talking",on); on ? startTalk() : stopTalk(); }
 function stop(){ if("speechSynthesis" in window) speechSynthesis.cancel(); clearInterval(timer); setTalking(false); }
 
 function speak(text){
@@ -190,7 +225,7 @@ function speak(text){
     // vangnet: als de browser geen woordgrenzen meldt, lichten we woorden op tijd op
     timer = setInterval(()=>{ if(!gotBoundary && idx<words.length) words[idx++].classList.add("on"); }, 330);
   };
-  u.onboundary = e=>{ if(e.name==="word"||e.name===undefined){ gotBoundary=true; if(idx<words.length) words[idx++].classList.add("on"); } };
+  u.onboundary = e=>{ if(e.name==="word"||e.name===undefined){ gotBoundary=true; target=1; if(idx<words.length) words[idx++].classList.add("on"); } };
   u.onend = u.onerror = ()=>{ clearInterval(timer); finish(); };
   speechSynthesis.speak(u);
 }

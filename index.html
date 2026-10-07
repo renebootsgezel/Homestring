@@ -88,7 +88,7 @@
 const YEAR = 2026, MONTH = 10;
 const DAYS = [
   {d: 9, emoji:"🐶", photo:"photos/dag09.jpg", jaw:{w:1000,h:1333,hinge:[540,540],top:[[303,477],[497,523]],poly:[[303,477],[497,523],[557,597],[577,677],[430,697],[350,630],[300,543]],dy:8,angle:-5}, text:"Goede reis lief baasje, en bedankt dat je mij goed achterlaat bij Odie."},
-  {d:10, emoji:"👧", photo:"photos/dag10.jpg", text:"Jeetje, dit was toch wel langer varen dan ik dacht, maar we hebben het eerste stuk gehad."},
+  {d:10, emoji:"👧", photo:"photos/dag10.jpg", jaw:{w:1000,h:1333,hinge:[575,482],top:[[494,491],[552,491]],ellipse:[523,491,29,15],poly:[[486,491],[558,491],[571,508],[562,531],[532,543],[500,538],[483,519],[477,503]],dy:11,angle:-3,feather:.8,wb:.4,wc:"#140506",wo:1,up:0}, text:"Jeetje, dit was toch wel langer varen dan ik dacht, maar we hebben het eerste stuk gehad."},
   {d:11, emoji:"👦", text:"Voorbeeldtekst voor dag drie."},
   {d:12, emoji:"🐕", text:"Voorbeeldtekst voor dag vier."},
   {d:13, emoji:"🏡", text:"Voorbeeldtekst voor dag vijf."},
@@ -159,12 +159,15 @@ function buildJaw(o){
   const j=o.jaw, pts=a=>a.map(p=>p.join(",")).join(" ");
   svgwrap.innerHTML = `<svg viewBox="0 0 ${j.w} ${j.h}" preserveAspectRatio="xMidYMid slice">
     <defs>
-      <filter id="soft" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="5"/></filter>
-      <filter id="soft2" x="-10%" y="-30%" width="120%" height="160%"><feGaussianBlur stdDeviation="2.5"/></filter>
+      <filter id="soft" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="${j.feather ?? 5}"/></filter>
+      <filter id="soft2" x="-10%" y="-30%" width="120%" height="160%"><feGaussianBlur stdDeviation="${j.wb ?? 2.5}"/></filter>
       <mask id="jm" maskUnits="userSpaceOnUse" x="0" y="0" width="${j.w}" height="${j.h}"><polygon points="${pts(j.poly)}" fill="#fff" filter="url(#soft)"/></mask>
     </defs>
     <image href="${o.photo}" width="${j.w}" height="${j.h}"/>
-    <polygon id="wedge" fill="#1c0a0e" fill-opacity=".92" filter="url(#soft2)" points=""/>
+    ${j.ellipse
+      ? `<clipPath id="wcl"><rect x="0" y="${j.ellipse[1]}" width="${j.w}" height="${j.h}"/></clipPath>
+         <g clip-path="url(#wcl)"><ellipse id="wedge" cx="${j.ellipse[0]}" cy="${j.ellipse[1]}" rx="${j.ellipse[2]}" ry="0" fill="${j.wc || '#140506'}"/></g>`
+      : `<polygon id="wedge" fill="${j.wc || '#1c0a0e'}" fill-opacity="${j.wo ?? .92}" filter="url(#soft2)" points=""/>`}
     <g id="jawg"><g mask="url(#jm)"><image href="${o.photo}" width="${j.w}" height="${j.h}"/></g></g>
   </svg>`;
   jaw = {j, g:svgwrap.querySelector("#jawg"), wedge:svgwrap.querySelector("#wedge")};
@@ -176,7 +179,8 @@ function applyJaw(v){
   if(!jaw) return; const {hinge:[hx,hy],dy,angle,top:[A,B]}=jaw.j;
   jaw.g.setAttribute("transform",`translate(0 ${dy*v}) rotate(${angle*v} ${hx} ${hy})`);
   // donkere bek precies in de opening tussen oude en nieuwe kaaklijn
-  const A2=moved(A,v), B2=moved(B,v), up=3;
+  if(jaw.j.ellipse){ const e=jaw.j.ellipse; jaw.wedge.setAttribute("ry", e[3]*v); jaw.wedge.style.display = v<.02 ? "none" : ""; return; }
+  const A2=moved(A,v), B2=moved(B,v), up=jaw.j.up ?? 3;
   jaw.wedge.setAttribute("points",[[A[0],A[1]-up],[B[0],B[1]-up],B2,A2].map(p=>p.join(",")).join(" "));
   jaw.wedge.style.display = v<.02 ? "none" : "";
 }

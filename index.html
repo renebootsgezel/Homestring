@@ -89,7 +89,7 @@ const YEAR = 2026, MONTH = 10;
 const DAYS = [
   {d: 9, emoji:"🐶", photo:"photos/dag09.jpg", jaw:{w:1000,h:1333,hinge:[540,540],top:[[303,477],[497,523]],poly:[[303,477],[497,523],[557,597],[577,677],[430,697],[350,630],[300,543]],dy:8,angle:-5}, text:"Goede reis lief baasje, en bedankt dat je mij goed achterlaat bij Odie."},
   {d:10, emoji:"👧", photo:"photos/dag10.jpg", jaw:{w:1000,h:1333,hinge:[575,482],top:[[494,491],[552,491]],ellipse:[523,491,29,15],poly:[[486,491],[558,491],[571,508],[562,531],[532,543],[500,538],[483,519],[477,503]],dy:11,angle:-3,feather:.8,wb:.4,wc:"#140506",wo:1,up:0}, text:"Jeetje, dit was toch wel langer varen dan ik dacht, maar we hebben het eerste stuk gehad."},
-  {d:11, emoji:"👦", photo:"photos/dag11.jpg", say:"Sooo Joed, het reizen zit er even op, waar zijn de orang oetans?", jaw:{w:900,h:1125,hinge:[575,500],top:[[380,503],[532,503]],ellipse:[456,503,62,22],poly:[[375,503],[532,503],[552,520],[572,570],[592,650],[565,715],[510,735],[420,742],[360,715],[332,640],[327,560],[335,500]],dy:16,angle:-4,feather:.8,wc:"#1a0709"}, text:"Soooo Dude, het reizen zit er ff op, waar zijn de orang oetans?"},
+  {d:11, emoji:"👦", photo:"photos/dag11.jpg", say:[["Soooo Dude,","en-US"],["het reizen zit er even op, waar zijn de orang oetans?","nl-NL"]], jaw:{w:900,h:1125,hinge:[575,500],top:[[375,508],[530,487]],ellipse:[452,497,62,22],tilt:-7.7,poly:[[375,508],[530,487],[552,508],[572,570],[592,650],[565,715],[510,735],[420,742],[360,715],[332,640],[327,560],[335,505]],dy:16,dx:2.2,angle:-1.5,feather:.8,wc:"#1a0709"}, text:"Soooo Dude, het reizen zit er ff op, waar zijn de orang oetans?"},
   {d:12, emoji:"🐕", text:"Voorbeeldtekst voor dag vier."},
   {d:13, emoji:"🏡", text:"Voorbeeldtekst voor dag vijf."},
   {d:14, emoji:"😄", text:"Voorbeeldtekst voor dag zes."},
@@ -166,7 +166,7 @@ function buildJaw(o){
     <image href="${o.photo}" width="${j.w}" height="${j.h}"/>
     ${j.ellipse
       ? `<clipPath id="wcl"><rect x="0" y="${j.ellipse[1]}" width="${j.w}" height="${j.h}"/></clipPath>
-         <g clip-path="url(#wcl)"><ellipse id="wedge" cx="${j.ellipse[0]}" cy="${j.ellipse[1]}" rx="${j.ellipse[2]}" ry="0" fill="${j.wc || '#140506'}"/></g>`
+         <g transform="rotate(${j.tilt||0} ${j.ellipse[0]} ${j.ellipse[1]})"><g clip-path="url(#wcl)"><ellipse id="wedge" cx="${j.ellipse[0]}" cy="${j.ellipse[1]}" rx="${j.ellipse[2]}" ry="0" fill="${j.wc || '#140506'}"/></g></g>`
       : `<polygon id="wedge" fill="${j.wc || '#1c0a0e'}" fill-opacity="${j.wo ?? .92}" filter="url(#soft2)" points=""/>`}
     <g id="jawg"><g mask="url(#jm)"><image href="${o.photo}" width="${j.w}" height="${j.h}"/></g></g>
   </svg>`;
@@ -177,7 +177,7 @@ function moved(p,v){ const {hinge:[hx,hy],dy,angle}=jaw.j, a=angle*v*Math.PI/180
   return [hx+x*Math.cos(a)-y*Math.sin(a), hy+x*Math.sin(a)+y*Math.cos(a)+dy*v]; }
 function applyJaw(v){
   if(!jaw) return; const {hinge:[hx,hy],dy,angle,top:[A,B]}=jaw.j;
-  jaw.g.setAttribute("transform",`translate(0 ${dy*v}) rotate(${angle*v} ${hx} ${hy})`);
+  jaw.g.setAttribute("transform",`translate(${(jaw.j.dx||0)*v} ${dy*v}) rotate(${angle*v} ${hx} ${hy})`);
   // donkere bek precies in de opening tussen oude en nieuwe kaaklijn
   if(jaw.j.ellipse){ const e=jaw.j.ellipse; jaw.wedge.setAttribute("ry", e[3]*v); jaw.wedge.style.display = v<.02 ? "none" : ""; return; }
   const A2=moved(A,v), B2=moved(B,v), up=jaw.j.up ?? 3;
@@ -213,25 +213,29 @@ let timer=null;
 function setTalking(on){ photo.classList.toggle("talking",on); on ? startTalk() : stopTalk(); }
 function stop(){ if("speechSynthesis" in window) speechSynthesis.cancel(); clearInterval(timer); setTalking(false); }
 
-function speak(text){
-  stop();
+let speakId=0;
+function speak(src){
+  stop(); const id=++speakId;
+  const segs = typeof src==="string" ? [[src,"nl-NL"]] : src;
   const words = [...bubble.querySelectorAll("span")]; words.forEach(w=>w.classList.remove("on"));
   const finish = ()=>{ setTalking(false); words.forEach(w=>w.classList.add("on")); };
-  if(!("speechSynthesis" in window)){ // geen spraak: toon gewoon de tekst
-    finish(); return;
-  }
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = "nl-NL"; u.rate = .95; u.pitch = 1.1;
-  const v = speechSynthesis.getVoices().find(v=>v.lang && v.lang.toLowerCase().startsWith("nl"));
-  if(v) u.voice = v;
+  if(!("speechSynthesis" in window)){ finish(); return; }
+  const voices = speechSynthesis.getVoices();
   let idx = 0, gotBoundary = false;
-  u.onstart = ()=>{ setTalking(true);
-    // vangnet: als de browser geen woordgrenzen meldt, lichten we woorden op tijd op
-    timer = setInterval(()=>{ if(!gotBoundary && idx<words.length) words[idx++].classList.add("on"); }, 330);
-  };
-  u.onboundary = e=>{ if(e.name==="word"||e.name===undefined){ gotBoundary=true; target=1; if(idx<words.length) words[idx++].classList.add("on"); } };
-  u.onend = u.onerror = ()=>{ clearInterval(timer); finish(); };
-  speechSynthesis.speak(u);
+  segs.forEach(([t,lang],i)=>{
+    const u = new SpeechSynthesisUtterance(t);
+    u.lang = lang; u.rate = .95; u.pitch = 1.1;
+    const L = lang.toLowerCase();
+    const v = voices.find(v=>v.lang && v.lang.replace("_","-").toLowerCase()===L) || voices.find(v=>v.lang && v.lang.toLowerCase().startsWith(L.slice(0,2)));
+    if(v) u.voice = v;
+    u.onstart = ()=>{ if(id!==speakId || i>0) return; setTalking(true);
+      // vangnet: als de browser geen woordgrenzen meldt, lichten we woorden op tijd op
+      timer = setInterval(()=>{ if(!gotBoundary && idx<words.length) words[idx++].classList.add("on"); }, 330);
+    };
+    u.onboundary = e=>{ if(id!==speakId) return; if(e.name==="word"||e.name===undefined){ gotBoundary=true; target=1; if(idx<words.length) words[idx++].classList.add("on"); } };
+    u.onend = u.onerror = ()=>{ if(id!==speakId || i<segs.length-1) return; clearInterval(timer); finish(); };
+    speechSynthesis.speak(u);
+  });
 }
 if("speechSynthesis" in window) speechSynthesis.getVoices();
 

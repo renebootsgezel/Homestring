@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Voor Anita">
+<title>Voor Anita</title>
+<style>
+  :root{
+    --bg1:#ffe9d6; --bg2:#ffd1dc; --ink:#3b2a3a; --accent:#e8506e; --gold:#f5b942; --card:#fff;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;min-height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Rounded","Helvetica Neue",sans-serif;
+    color:var(--ink);
+    background:linear-gradient(160deg,var(--bg1),var(--bg2));
+    background-attachment:fixed;
+    padding:max(env(safe-area-inset-top),20px) 16px max(env(safe-area-inset-bottom),24px);
+  }
+  header{text-align:center;margin:8px 0 18px}
+  header h1{margin:0;font-size:2rem;letter-spacing:-.5px}
+  header p{margin:6px 0 0;opacity:.8}
+  #countdown{display:inline-block;margin-top:10px;padding:6px 14px;border-radius:99px;background:#fff9;font-weight:600;font-size:.95rem}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:520px;margin:0 auto}
+  .door{
+    aspect-ratio:1;border:0;border-radius:16px;font:inherit;position:relative;
+    background:var(--card);color:var(--ink);font-size:1.5rem;font-weight:800;
+    box-shadow:0 4px 10px #0002;cursor:pointer;transition:transform .15s;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  }
+  .door small{font-size:.65rem;font-weight:600;opacity:.6;text-transform:uppercase}
+  .door:active{transform:scale(.94)}
+  .door.open{background:linear-gradient(135deg,var(--accent),#ff8a6b);color:#fff}
+  .door.open small{opacity:.9}
+  .door.today{animation:pulse 1.6s infinite;outline:3px solid var(--gold)}
+  .door.locked{opacity:.55;cursor:default}
+  .door.locked::after{content:"🔒";position:absolute;top:4px;right:6px;font-size:.7rem}
+  .door.last{grid-column:span 2;aspect-ratio:2/1;background:linear-gradient(135deg,var(--gold),#ff8a6b);color:#fff}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+
+  #modal{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;padding:16px;z-index:10}
+  #modal.show{display:flex}
+  .sheet{background:var(--card);border-radius:24px;max-width:460px;width:100%;max-height:92vh;overflow:auto;padding:16px;animation:pop .35s cubic-bezier(.2,1.4,.4,1)}
+  @keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+  .photo{position:relative;border-radius:18px;overflow:hidden;aspect-ratio:4/5;background:#eee;display:flex;align-items:center;justify-content:center}
+  .photo img{width:100%;height:100%;object-fit:cover;display:block}
+  .photo .ph{font-size:6rem}
+  .photo.talking{animation:talk .35s ease-in-out infinite alternate}
+  @keyframes talk{from{transform:scale(1) rotate(-1deg)}to{transform:scale(1.035) rotate(1deg)}}
+  .mouth{position:absolute;left:50%;bottom:22%;width:46px;height:14px;margin-left:-23px;background:#7a1f33;border-radius:0 0 46px 46px;opacity:0;transform-origin:top;border:2px solid #fff8}
+  .talking .mouth{opacity:.9;animation:mouth .22s ease-in-out infinite alternate}
+  @keyframes mouth{from{transform:scaleY(.3)}to{transform:scaleY(1.6)}}
+  .bubble{margin-top:14px;font-size:1.15rem;line-height:1.5;text-align:center;min-height:5em}
+  .bubble span{opacity:.25;transition:opacity .2s}
+  .bubble span.on{opacity:1}
+  .row{display:flex;gap:10px;margin-top:12px}
+  .row button{flex:1;border:0;border-radius:14px;padding:12px;font:inherit;font-weight:700;font-size:1rem;cursor:pointer}
+  #again{background:var(--accent);color:#fff}
+  #close{background:#eee;color:var(--ink)}
+  canvas#confetti{position:fixed;inset:0;pointer-events:none;z-index:20}
+  .hint{text-align:center;font-size:.8rem;opacity:.6;margin-top:18px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Voor Anita 💌</h1>
+  <p>Elke dag een vakje. Tik en luister.</p>
+  <div id="countdown"></div>
+</header>
+
+<div class="grid" id="grid"></div>
+<p class="hint" id="hint"></p>
+
+<div id="modal" role="dialog" aria-modal="true">
+  <div class="sheet">
+    <div class="photo" id="photo"><span class="ph" id="ph">🐶</span><img id="img" alt="" hidden><div class="mouth"></div></div>
+    <div class="bubble" id="bubble"></div>
+    <div class="row"><button id="again">🔊 Nog een keer</button><button id="close">Sluiten</button></div>
+  </div>
+</div>
+<canvas id="confetti"></canvas>
+
+<script>
+/* ===== INHOUD (testversie: voorbeeldteksten, geen echte foto's) =====
+   Per dag: date, text, photo (pad naar foto, of leeg voor emoji), emoji (alleen test) */
+const YEAR = 2026, MONTH = 10;
+const DAYS = [
+  {d: 9, emoji:"🐶", text:"Goede reis lieverd! Ik mis je nu al. De hond ook, die ligt al bij de deur."},
+  {d:10, emoji:"👧", text:"Goedemorgen! Vandaag ben je in Medan. Wij denken aan je."},
+  {d:11, emoji:"👦", text:"Voorbeeldtekst voor dag drie."},
+  {d:12, emoji:"🐕", text:"Voorbeeldtekst voor dag vier."},
+  {d:13, emoji:"🏡", text:"Voorbeeldtekst voor dag vijf."},
+  {d:14, emoji:"😄", text:"Voorbeeldtekst voor dag zes."},
+  {d:15, emoji:"🐶", text:"Voorbeeldtekst voor dag zeven."},
+  {d:16, emoji:"👧", text:"Voorbeeldtekst voor dag acht."},
+  {d:17, emoji:"👦", text:"Voorbeeldtekst voor dag negen."},
+  {d:18, emoji:"🐕", text:"Voorbeeldtekst voor dag tien."},
+  {d:19, emoji:"🏡", text:"Voorbeeldtekst voor dag elf."},
+  {d:20, emoji:"😄", text:"Voorbeeldtekst voor dag twaalf."},
+  {d:21, emoji:"🐶", text:"Voorbeeldtekst voor dag dertien."},
+  {d:22, emoji:"👧", text:"Voorbeeldtekst voor dag veertien."},
+  {d:23, emoji:"👦", text:"Voorbeeldtekst voor dag vijftien. Morgen kom je thuis!"},
+  {d:24, emoji:"❤️", text:"Welkom thuis, Anita! Wij hebben je gemist.", last:true},
+];
+
+/* ===== LOGICA ===== */
+const params = new URLSearchParams(location.search);
+// ?test=1 opent alles, ?dag=2026-10-14 simuleert een datum
+function today(){
+  const s = params.get("dag");
+  if(s){ const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); }
+  const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate());
+}
+const TEST = params.has("test");
+const T = today();
+const dateOf = o => new Date(YEAR, MONTH-1, o.d);
+const isUnlocked = o => TEST || dateOf(o) <= T;
+
+const grid = document.getElementById("grid");
+const opened = new Set();
+try{ JSON.parse(localStorage.getItem("opened")||"[]").forEach(x=>opened.add(x)); }catch(e){}
+const save = ()=>{ try{ localStorage.setItem("opened", JSON.stringify([...opened])); }catch(e){} };
+const monthShort = "okt";
+
+DAYS.forEach((o,i)=>{
+  const b = document.createElement("button");
+  b.className = "door" + (o.last?" last":"");
+  b.innerHTML = `${o.d}<small>${monthShort}</small>`;
+  const unlocked = isUnlocked(o);
+  if(!unlocked) b.classList.add("locked");
+  if(unlocked && opened.has(o.d)) b.classList.add("open");
+  if(+dateOf(o)===+T) b.classList.add("today");
+  b.onclick = ()=>{
+    if(!isUnlocked(o)){ b.animate([{transform:"translateX(-6px)"},{transform:"translateX(6px)"},{transform:"translateX(0)"}],{duration:250}); return; }
+    openDay(o,b);
+  };
+  grid.appendChild(b);
+});
+
+// Aftelling tot thuiskomst
+const home = new Date(YEAR,MONTH-1,24);
+const left = Math.round((home-T)/86400000);
+document.getElementById("countdown").textContent =
+  left>0 ? `Nog ${left} ${left===1?"dag":"dagen"} tot je weer thuis bent` : left===0 ? "Vandaag kom je thuis! 🎉" : "Welkom thuis ❤️";
+const next = DAYS.find(o=>dateOf(o)>T);
+document.getElementById("hint").textContent = TEST ? "Testmodus: alle vakjes zijn open" : (next ? `Het volgende vakje gaat open op ${next.d} oktober.` : "");
+
+// Modal + spraak
+const modal = document.getElementById("modal"), photo = document.getElementById("photo");
+const bubble = document.getElementById("bubble"), img = document.getElementById("img"), ph = document.getElementById("ph");
+let current = null;
+
+function openDay(o,btn){
+  current = o;
+  if(o.photo){ img.src=o.photo; img.hidden=false; ph.hidden=true; } else { img.hidden=true; ph.hidden=false; ph.textContent=o.emoji||"💌"; }
+  // woorden apart zodat ze oplichten tijdens het praten
+  bubble.innerHTML = o.text.split(" ").map(w=>`<span>${w}</span>`).join(" ");
+  modal.classList.add("show");
+  opened.add(o.d); save(); btn.classList.add("open");
+  boom();
+  setTimeout(()=>speak(o.text), 350);
+}
+function closeModal(){ stop(); modal.classList.remove("show"); }
+document.getElementById("close").onclick = closeModal;
+document.getElementById("again").onclick = ()=>current && speak(current.text);
+modal.addEventListener("click",e=>{ if(e.target===modal) closeModal(); });
+
+let timer=null;
+function setTalking(on){ photo.classList.toggle("talking",on); }
+function stop(){ if("speechSynthesis" in window) speechSynthesis.cancel(); clearInterval(timer); setTalking(false); }
+
+function speak(text){
+  stop();
+  const words = [...bubble.querySelectorAll("span")]; words.forEach(w=>w.classList.remove("on"));
+  const finish = ()=>{ setTalking(false); words.forEach(w=>w.classList.add("on")); };
+  if(!("speechSynthesis" in window)){ // geen spraak: toon gewoon de tekst
+    finish(); return;
+  }
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "nl-NL"; u.rate = .95; u.pitch = 1.1;
+  const v = speechSynthesis.getVoices().find(v=>v.lang && v.lang.toLowerCase().startsWith("nl"));
+  if(v) u.voice = v;
+  let idx = 0, gotBoundary = false;
+  u.onstart = ()=>{ setTalking(true);
+    // vangnet: als de browser geen woordgrenzen meldt, lichten we woorden op tijd op
+    timer = setInterval(()=>{ if(!gotBoundary && idx<words.length) words[idx++].classList.add("on"); }, 330);
+  };
+  u.onboundary = e=>{ if(e.name==="word"||e.name===undefined){ gotBoundary=true; if(idx<words.length) words[idx++].classList.add("on"); } };
+  u.onend = u.onerror = ()=>{ clearInterval(timer); finish(); };
+  speechSynthesis.speak(u);
+}
+if("speechSynthesis" in window) speechSynthesis.getVoices();
+
+// Confetti
+const cv = document.getElementById("confetti"), cx = cv.getContext("2d");
+function boom(){
+  cv.width = innerWidth; cv.height = innerHeight;
+  const colors = ["#e8506e","#f5b942","#ff8a6b","#6ec6ff","#9be37d"];
+  const ps = Array.from({length:90},()=>({x:innerWidth/2,y:innerHeight/2.2,vx:(Math.random()-.5)*14,vy:-Math.random()*14-4,r:Math.random()*6+3,c:colors[Math.random()*5|0],a:1}));
+  (function f(){
+    cx.clearRect(0,0,cv.width,cv.height); let alive=false;
+    ps.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=.35; p.a-=.012; if(p.a>0){alive=true; cx.globalAlpha=p.a; cx.fillStyle=p.c; cx.fillRect(p.x,p.y,p.r,p.r*1.6);} });
+    if(alive) requestAnimationFrame(f); else cx.clearRect(0,0,cv.width,cv.height);
+  })();
+}
+</script>
+</body>
+</html>

@@ -16,14 +16,17 @@
   body{
     font-family:-apple-system,BlinkMacSystemFont,"SF Pro Rounded","Helvetica Neue",sans-serif;
     color:var(--ink);
-    background:linear-gradient(160deg,var(--bg1),var(--bg2));
-    background-attachment:fixed;
+    background:var(--bg1);
     padding:max(env(safe-area-inset-top),20px) 16px max(env(safe-area-inset-bottom),24px);
   }
-  header{text-align:center;margin:8px 0 18px}
+  body::before{content:"";position:fixed;inset:-30px;z-index:-1;
+    background:linear-gradient(160deg,#ffe9d6d9,#ffd1dce6),url(photos/familie.jpg) center/cover;filter:blur(16px)}
+  header{text-align:center;margin:8px auto 18px;max-width:520px}
+  .hero{display:block;width:100%;border-radius:20px;box-shadow:0 8px 24px #0004;border:4px solid #fff;margin:0 0 14px}
+  .head-text{background:#ffffffb3;border-radius:18px;padding:10px 14px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
   header h1{margin:0;font-size:2rem;letter-spacing:-.5px}
   header p{margin:6px 0 0;opacity:.8}
-  #countdown{display:inline-block;margin-top:10px;padding:6px 14px;border-radius:99px;background:#fff9;font-weight:600;font-size:.95rem}
+  #countdown{display:inline-block;margin-top:10px;padding:6px 14px;border-radius:99px;background:#fff;font-weight:600;font-size:.95rem}
   .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;max-width:520px;margin:0 auto}
   .door{
     aspect-ratio:1;border:0;border-radius:16px;font:inherit;position:relative;
@@ -60,14 +63,17 @@
   #again{background:var(--accent);color:#fff}
   #close{background:#eee;color:var(--ink)}
   canvas#confetti{position:fixed;inset:0;pointer-events:none;z-index:20}
-  .hint{text-align:center;font-size:.8rem;opacity:.6;margin-top:18px}
+  .hint{text-align:center;font-size:.8rem;margin:18px auto 0;max-width:520px;padding:6px 12px;border-radius:12px;background:#ffffffb3;width:fit-content}
 </style>
 </head>
 <body>
 <header>
-  <h1>Voor Anita 💌</h1>
-  <p>Elke dag een vakje. Tik en luister.</p>
-  <div id="countdown"></div>
+  <img class="hero" src="photos/familie.jpg" alt="">
+  <div class="head-text">
+    <h1>Voor Anita 💌</h1>
+    <p>Elke dag een vakje. Tik en luister.</p>
+    <div id="countdown"></div>
+  </div>
 </header>
 
 <div class="grid" id="grid"></div>

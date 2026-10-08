@@ -221,9 +221,30 @@ let timer=null;
 function setTalking(on){ photo.classList.toggle("talking",on); on ? startTalk() : stopTalk(); }
 function stop(){ if("speechSynthesis" in window) speechSynthesis.cancel(); clearInterval(timer); setTalking(false); }
 
+// Stemkeuze: zoek per taal de beste vrouwen- of mannenstem die dit toestel heeft
+const FEM = /claire|ellen|fenna|colette|google nederlands|samantha|karen|moira|tessa|monica|m[oó]nica|paulina|marisol|helena|laura|elena|female|vrouw/i;
+const MAL = /xander|maarten|arnaud|daniel|alex|tom\b|fred|jorge|diego|juan|pablo|male|man\b/i;
+const GOOD = /premium|enhanced|natural|neural|online|siri/i;
+function pickVoice(voices, lang, who){
+  const L = lang.toLowerCase().replace("_","-");
+  let c = voices.filter(v=>v.lang && v.lang.toLowerCase().replace("_","-")===L);
+  if(!c.length) c = voices.filter(v=>v.lang && v.lang.toLowerCase().startsWith(L.slice(0,2)));
+  if(!c.length) return {v:null, match:false};
+  const want = who==="m" ? MAL : FEM, avoid = who==="m" ? FEM : MAL;
+  const score = v => (want.test(v.name)?4:0) + (avoid.test(v.name)?-4:0) + (GOOD.test(v.name)?2:0);
+  c.sort((a,b)=>score(b)-score(a));
+  return {v:c[0], match: want.test(c[0].name)};
+}
+function voiceTune(who, match){
+  if(who==="m") return match ? {rate:.92, pitch:.85} : {rate:.9, pitch:.6};
+  if(who==="dog") return {rate:1.25, pitch:1.9};
+  if(who==="f") return match ? {rate:1, pitch:1.15} : {rate:1, pitch:1.3};
+  return {rate:.95, pitch:1.05};
+}
 let speakId=0;
 function speak(src){
   stop(); const id=++speakId;
+  const who = current && current.emoji==="👦" ? "m" : current && current.emoji==="🐶" ? "dog" : current && current.emoji==="👧" ? "f" : "x";
   const segs = typeof src==="string" ? [[src,"nl-NL"]] : src;
   const words = [...bubble.querySelectorAll("span")]; words.forEach(w=>w.classList.remove("on"));
   const finish = ()=>{ setTalking(false); words.forEach(w=>w.classList.add("on")); };
@@ -233,9 +254,9 @@ function speak(src){
   segs.forEach(([t,lang],i)=>{
     const u = new SpeechSynthesisUtterance(t);
     u.lang = lang; u.rate = .95; u.pitch = 1.1;
-    const L = lang.toLowerCase();
-    const v = voices.find(v=>v.lang && v.lang.replace("_","-").toLowerCase()===L) || voices.find(v=>v.lang && v.lang.toLowerCase().startsWith(L.slice(0,2)));
-    if(v) u.voice = v;
+    const pick = pickVoice(voices, lang, who);
+    if(pick.v) u.voice = pick.v;
+    Object.assign(u, voiceTune(who, pick.match));
     u.onstart = ()=>{ if(id!==speakId || i>0) return; setTalking(true);
       // vangnet: als de browser geen woordgrenzen meldt, lichten we woorden op tijd op
       timer = setInterval(()=>{ if(!gotBoundary && idx<words.length) words[idx++].classList.add("on"); }, 330);

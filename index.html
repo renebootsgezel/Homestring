@@ -219,7 +219,8 @@ modal.addEventListener("click",e=>{ if(e.target===modal) closeModal(); });
 
 let timer=null;
 function setTalking(on){ photo.classList.toggle("talking",on); on ? startTalk() : stopTalk(); }
-function stop(){ if("speechSynthesis" in window) speechSynthesis.cancel(); clearInterval(timer); setTalking(false); }
+let clip=null;
+function stop(){ if("speechSynthesis" in window) speechSynthesis.cancel(); if(clip){ clip.onended=clip.onerror=null; clip.pause(); clip=null; } clearInterval(timer); setTalking(false); }
 
 // Stemkeuze: zoek per taal de beste vrouwen- of mannenstem die dit toestel heeft
 const FEM = /claire|ellen|fenna|colette|google nederlands|samantha|karen|moira|tessa|monica|m[oó]nica|paulina|marisol|helena|laura|elena|female|vrouw/i;
@@ -236,7 +237,7 @@ function pickVoice(voices, lang, who){
   return {v:c[0], match: want.test(c[0].name)};
 }
 function voiceTune(who, match){
-  if(who==="m") return match ? {rate:.92, pitch:.85} : {rate:.9, pitch:.6};
+  if(who==="m") return match ? {rate:.92, pitch:.85} : {rate:.9, pitch:.8};
   if(who==="dog") return {rate:1.25, pitch:1.9};
   if(who==="f") return match ? {rate:1, pitch:1.15} : {rate:1, pitch:1.3};
   return {rate:.95, pitch:1.05};
@@ -248,6 +249,19 @@ function speak(src){
   const segs = typeof src==="string" ? [[src,"nl-NL"]] : src;
   const words = [...bubble.querySelectorAll("span")]; words.forEach(w=>w.classList.remove("on"));
   const finish = ()=>{ setTalking(false); words.forEach(w=>w.classList.add("on")); };
+  // echte opname (mp3 in audio/) gaat voor computerstem; lukt afspelen niet, dan valt hij terug op de stem
+  if(current && current.audio){
+    const a = clip = new Audio(current.audio);
+    a.onended = ()=>{ if(id!==speakId) return; clearInterval(timer); finish(); };
+    a.onerror = ()=>{ if(id!==speakId) return; clip=null; speakTTS(); };
+    a.play().then(()=>{ if(id!==speakId) return; setTalking(true);
+      let n=0; const per=(isFinite(a.duration)&&a.duration>0 ? a.duration*1000 : 4000)/Math.max(words.length,1);
+      timer=setInterval(()=>{ if(n<words.length) words[n++].classList.add("on"); }, per*0.92);
+    }).catch(()=>{ if(id!==speakId) return; clip=null; speakTTS(); });
+    return;
+  }
+  speakTTS();
+  function speakTTS(){
   if(!("speechSynthesis" in window)){ finish(); return; }
   const voices = speechSynthesis.getVoices();
   let idx = 0, gotBoundary = false;
@@ -265,6 +279,7 @@ function speak(src){
     u.onend = u.onerror = ()=>{ if(id!==speakId || i<segs.length-1) return; clearInterval(timer); finish(); };
     speechSynthesis.speak(u);
   });
+  }
 }
 if("speechSynthesis" in window) speechSynthesis.getVoices();
 

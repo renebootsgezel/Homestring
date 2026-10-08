@@ -99,7 +99,7 @@ const DAYS = [
   {d:12, emoji:"👧", photo:"photos/dag12.jpg", say:"Hee lieve mama, hopelijk is het lekker weer en ben je geland na al dat reizen!", jaw:{w:900,h:1125,hinge:[600,395],top:[[440,408],[585,402]],ellipse:[508,405,42,12],tilt:-3,poly:[[440,408],[585,402],[596,430],[575,456],[545,478],[505,486],[465,475],[430,452],[418,430]],dy:13,angle:-1,feather:.8,wc:"#1e080a"}, text:"Hey lieve mama, hopelijk is het lekker weer en ben je geland na al dat reizen!"},
   {d:13, emoji:"👧", photo:"photos/dag13.jpg", jaw:{w:900,h:1125,hinge:[650,640],top:[[335,708],[640,700]],ellipse:[483,703,58,16],tilt:1.5,poly:[[335,708],[640,700],[690,740],[682,800],[645,860],[565,900],[480,906],[400,882],[340,830],[308,760]],dy:15,angle:-1,feather:.8,wc:"#1c080a"}, text:"Hoi mams! Hoop dat je nog niet verdampt bent door de hitte en lekker aan het genieten bent."},
   {d:14, emoji:"🐶", photo:"photos/dag14.jpg", text:"Zoooo lekker aan het genieten zonder mij? Geen vreemde honden aaien hè!"},
-  {d:15, emoji:"🐶", text:"Voorbeeldtekst voor dag zeven."},
+  {d:15, emoji:"👧", photo:"photos/dag15.jpg", say:"Hoi mooie mama, ik hoop dat je nog niet wegsmelt daar! Hou je hoofd koel. Groetjes!", jaw:{w:900,h:1125,hinge:[657,437],top:[[478,427],[525,433]],tri:true,wb:1.2,up:1,poly:[[468,426],[522,433],[570,437],[615,440],[615,490],[585,505],[540,507],[510,500],[488,486],[477,468],[470,446]],dy:0,angle:-7,feather:.8,wc:"#2a0a0e",wo:.95}, text:"Hoi mooie mama, ik hoop dat je nog niet wegsmelt daar! Hou je hoofd koel :) Groetjes"},
   {d:16, emoji:"👧", text:"Voorbeeldtekst voor dag acht."},
   {d:17, emoji:"👦", text:"Voorbeeldtekst voor dag negen."},
   {d:18, emoji:"🐕", text:"Voorbeeldtekst voor dag tien."},
@@ -187,7 +187,7 @@ function applyJaw(v){
   // donkere bek precies in de opening tussen oude en nieuwe kaaklijn
   if(jaw.j.ellipse){ const e=jaw.j.ellipse; jaw.wedge.setAttribute("ry", e[3]*v); jaw.wedge.style.display = v<.02 ? "none" : ""; return; }
   const A2=moved(A,v), B2=moved(B,v), up=jaw.j.up ?? 3;
-  jaw.wedge.setAttribute("points",[[A[0],A[1]-up],[B[0],B[1]-up],B2,A2].map(p=>p.join(",")).join(" "));
+  jaw.wedge.setAttribute("points",(jaw.j.tri ? [[A[0],A[1]-up],[B[0],B[1]],A2] : [[A[0],A[1]-up],[B[0],B[1]-up],B2,A2]).map(p=>p.join(",")).join(" "));
   jaw.wedge.style.display = v<.02 ? "none" : "";
 }
 function tick(){ cur += (target-cur)*.5; applyJaw(cur);

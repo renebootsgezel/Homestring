@@ -108,7 +108,7 @@ const DAYS = [
   {d:21, emoji:"👦", photo:"photos/dag21.jpg", say:"Hé schat, hoe gaat het daar? Kun je mij even een recept doorsturen van lekker Indonesisch eten? Lof joe!", jaw:{w:900,h:1125,hinge:[570,600],top:[[262,658],[440,640]],ellipse:[350,652,88,14],tilt:-4,poly:[[205,655],[262,658],[440,640],[540,640],[552,690],[540,760],[490,820],[400,850],[320,850],[250,815],[210,770],[185,710]],dy:16,angle:-1,feather:.8,wc:"#2c0f0f"}, text:"Hé schat, hoe gaat het daar? Kun je mij even een recept doorsturen van lekker Indonesisch eten? Lof Joe!"},
   {d:22, emoji:"🐶", photo:"photos/dag22.jpg", jaw:{w:900,h:1125,hinge:[700,640],top:[[330,742],[590,750]],ellipse:[445,740,75,16],tilt:4,poly:[[330,742],[420,738],[520,742],[590,750],[600,800],[560,850],[500,880],[430,890],[370,860],[330,810]],dy:8,angle:-3,feather:1.5,wc:"#0c0405"}, text:"Wanneer kom je weer eens thuis? Die brokjes beginnen mij aardig de keel uit te hangen."},
   {d:23, emoji:"👧", photo:"photos/dag23.jpg", jaw:{w:900,h:1125,hinge:[560,380],top:[[408,404],[482,404]],ellipse:[445,404,38,14],tilt:0,poly:[[366,405],[550,405],[552,440],[525,462],[490,482],[440,492],[395,482],[375,458],[362,430]],dy:14,angle:-1,feather:.8,wc:"#3a1019"}, text:"Mama wil je zo'n mooie gele fiets voor mij meenemen uit Bali? Kusjes"},
-  {d:24, emoji:"❤️", text:"Welkom thuis, Anita! Wij hebben je gemist.", last:true},
+  {d:24, emoji:"❤️", photo:"photos/dag24.jpg", ar:"1200/640", say:"Bijna thuis! We hebben je gemist en houden van je!", jaw:[{"w":1200,"h":640,"hinge":[238,356],"top":[[128,379],[192,378]],"ellipse":[160,380,30,12],"tilt":-0.5,"poly":[[119,379],[200,378],[216,388],[214,415],[198,435],[169,445],[138,440],[112,422],[100,400],[104,385]],"dy":18,"angle":-1,"feather":0.8,"wc":"#2a0c10","amp":1},{"w":1200,"h":640,"hinge":[538,312],"top":[[460,326],[504,325]],"ellipse":[482,328,21,11],"tilt":-0.5,"poly":[[450,328],[515,326],[522,344],[515,362],[498,374],[478,376],[459,370],[446,356],[441,340]],"dy":16,"angle":-1,"feather":0.8,"wc":"#2a0c10","amp":0.9},{"w":1200,"h":640,"hinge":[752,225],"top":[[665,238],[722,235]],"ellipse":[692,239,28,12],"tilt":-1.5,"poly":[[652,239],[728,236],[740,248],[735,262],[718,275],[692,280],[668,275],[650,265],[642,250]],"dy":16,"angle":-1,"feather":0.8,"wc":"#2a0c10","amp":1},{"w":1200,"h":640,"hinge":[1062,312],"top":[[972,318],[1030,330]],"ellipse":[1001,325,28,12],"tilt":10,"poly":[[962,314],[1038,334],[1048,348],[1038,362],[1019,375],[994,379],[969,371],[954,356],[948,335]],"dy":18,"angle":-1,"feather":0.8,"wc":"#2a0c10","amp":0.95}], text:"Bijna thuis, we hebben je gemist en houden van je.", last:true},
 ];
 
 /* ===== LOGICA ===== */
@@ -162,33 +162,35 @@ const NS = "http://www.w3.org/2000/svg";
 
 // Pepper praat: de onderkaak is een apart plaatje dat om een scharnier draait
 function buildJaw(o){
-  const j=o.jaw, pts=a=>a.map(p=>p.join(",")).join(" ");
-  svgwrap.innerHTML = `<svg viewBox="0 0 ${j.w} ${j.h}" preserveAspectRatio="xMidYMid slice">
-    <defs>
-      <filter id="soft" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="${j.feather ?? 5}"/></filter>
-      <filter id="soft2" x="-10%" y="-30%" width="120%" height="160%"><feGaussianBlur stdDeviation="${j.wb ?? 2.5}"/></filter>
-      <mask id="jm" maskUnits="userSpaceOnUse" x="0" y="0" width="${j.w}" height="${j.h}"><polygon points="${pts(j.poly)}" fill="#fff" filter="url(#soft)"/></mask>
-    </defs>
-    <image href="${o.photo}" width="${j.w}" height="${j.h}"/>
-    ${j.ellipse
-      ? `<clipPath id="wcl"><rect x="0" y="${j.ellipse[1]}" width="${j.w}" height="${j.h}"/></clipPath>
-         <g transform="rotate(${j.tilt||0} ${j.ellipse[0]} ${j.ellipse[1]})"><g clip-path="url(#wcl)"><ellipse id="wedge" cx="${j.ellipse[0]}" cy="${j.ellipse[1]}" rx="${j.ellipse[2]}" ry="0" fill="${j.wc || '#140506'}"/></g></g>`
-      : `<polygon id="wedge" fill="${j.wc || '#1c0a0e'}" fill-opacity="${j.wo ?? .92}" filter="url(#soft2)" points=""/>`}
-    <g id="jawg"><g mask="url(#jm)"><image href="${o.photo}" width="${j.w}" height="${j.h}"/></g></g>
-  </svg>`;
-  jaw = {j, g:svgwrap.querySelector("#jawg"), wedge:svgwrap.querySelector("#wedge")};
+  const J=Array.isArray(o.jaw)?o.jaw:[o.jaw], W=J[0].w, H=J[0].h, pts=a=>a.map(p=>p.join(",")).join(" ");
+  let defs="", wedges="", jaws="";
+  J.forEach((j,i)=>{
+    defs += `<filter id="soft${i}" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="${j.feather ?? 5}"/></filter>
+      <filter id="soft2${i}" x="-10%" y="-30%" width="120%" height="160%"><feGaussianBlur stdDeviation="${j.wb ?? 2.5}"/></filter>
+      <mask id="jm${i}" maskUnits="userSpaceOnUse" x="0" y="0" width="${W}" height="${H}"><polygon points="${pts(j.poly)}" fill="#fff" filter="url(#soft${i})"/></mask>`;
+    wedges += j.ellipse
+      ? `<clipPath id="wcl${i}"><rect x="0" y="${j.ellipse[1]}" width="${W}" height="${H}" transform="rotate(${j.tilt||0} ${j.ellipse[0]} ${j.ellipse[1]})"/></clipPath>
+         <g clip-path="url(#wcl${i})"><g transform="rotate(${j.tilt||0} ${j.ellipse[0]} ${j.ellipse[1]})"><ellipse id="wedge${i}" cx="${j.ellipse[0]}" cy="${j.ellipse[1]}" rx="${j.ellipse[2]}" ry="0" fill="${j.wc || '#140506'}"/></g></g>`
+      : `<polygon id="wedge${i}" fill="${j.wc || '#1c0a0e'}" fill-opacity="${j.wo ?? .92}" filter="url(#soft2${i})" points=""/>`;
+    jaws += `<g id="jawg${i}"><g mask="url(#jm${i})"><image href="${o.photo}" width="${W}" height="${H}"/></g></g>`;
+  });
+  svgwrap.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice"><defs>${defs}</defs>
+    <image href="${o.photo}" width="${W}" height="${H}"/>${wedges}${jaws}</svg>`;
+  jaw = J.map((j,i)=>({j, g:svgwrap.querySelector("#jawg"+i), wedge:svgwrap.querySelector("#wedge"+i)}));
   applyJaw(0);
 }
-function moved(p,v){ const {hinge:[hx,hy],dy,angle}=jaw.j, a=angle*v*Math.PI/180, x=p[0]-hx, y=p[1]-hy;
+function moved(p,v,j){ const {hinge:[hx,hy],dy,angle}=j, a=angle*v*Math.PI/180, x=p[0]-hx, y=p[1]-hy;
   return [hx+x*Math.cos(a)-y*Math.sin(a), hy+x*Math.sin(a)+y*Math.cos(a)+dy*v]; }
-function applyJaw(v){
-  if(!jaw) return; const {hinge:[hx,hy],dy,angle,top:[A,B]}=jaw.j;
-  jaw.g.setAttribute("transform",`translate(${(jaw.j.dx||0)*v} ${dy*v}) rotate(${angle*v} ${hx} ${hy})`);
-  // donkere bek precies in de opening tussen oude en nieuwe kaaklijn
-  if(jaw.j.ellipse){ const e=jaw.j.ellipse; jaw.wedge.setAttribute("ry", e[3]*v); jaw.wedge.style.display = v<.02 ? "none" : ""; return; }
-  const A2=moved(A,v), B2=moved(B,v), up=jaw.j.up ?? 3;
-  jaw.wedge.setAttribute("points",(jaw.j.tri ? [[A[0],A[1]-up],[B[0],B[1]],A2] : [[A[0],A[1]-up],[B[0],B[1]-up],B2,A2]).map(p=>p.join(",")).join(" "));
-  jaw.wedge.style.display = v<.02 ? "none" : "";
+function applyJaw(v0){
+  if(!jaw) return;
+  jaw.forEach(J=>{ const j=J.j, v=v0*(j.amp||1), {hinge:[hx,hy],dy,angle,top:[A,B]}=j;
+    J.g.setAttribute("transform",`translate(${(j.dx||0)*v} ${dy*v}) rotate(${angle*v} ${hx} ${hy})`);
+    // donkere bek precies in de opening tussen oude en nieuwe kaaklijn
+    if(j.ellipse){ J.wedge.setAttribute("ry", j.ellipse[3]*v); J.wedge.style.display = v<.02 ? "none" : ""; return; }
+    const A2=moved(A,v,j), B2=moved(B,v,j), up=j.up ?? 3;
+    J.wedge.setAttribute("points",(j.tri ? [[A[0],A[1]-up],[B[0],B[1]],A2] : [[A[0],A[1]-up],[B[0],B[1]-up],B2,A2]).map(p=>p.join(",")).join(" "));
+    J.wedge.style.display = v<.02 ? "none" : "";
+  });
 }
 function tick(){ cur += (target-cur)*.5; applyJaw(cur);
   if(beat || Math.abs(cur-target)>.01) raf=requestAnimationFrame(tick); else { raf=null; applyJaw(0); } }
@@ -199,7 +201,7 @@ function stopTalk(){ clearInterval(beat); beat=null; target=0; if(!raf) raf=requ
 
 function openDay(o,btn){
   current = o;
-  svgwrap.innerHTML=""; jaw=null;
+  svgwrap.innerHTML=""; jaw=null; photo.style.aspectRatio=o.ar||"";
   if(o.photo && o.jaw){ buildJaw(o); img.hidden=true; ph.hidden=true; }
   else if(o.photo){ img.src=o.photo; img.hidden=false; ph.hidden=true; }
   else { img.hidden=true; ph.hidden=false; ph.textContent=o.emoji||"💌"; }
